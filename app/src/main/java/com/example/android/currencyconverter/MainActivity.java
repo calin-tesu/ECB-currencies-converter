@@ -3,8 +3,9 @@ package com.example.android.currencyconverter;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.View;
-import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -27,6 +28,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.Currency;
 import java.util.List;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -46,44 +48,56 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String EXCHANGE_RATES_XML = "exchange_rates.xml";
 
-    private Button checkButton;
+    private EditText amountToConvert;
     private TextView textView;
 
+    private List<EcbCurrency> ecbCurrencyList;
+
     File file;
+
+    //TODO add a recyclerView to display the converted values
+
+    //TODO add a Spinner and the logic to switch between currencies to convert (convert from USD
+    //or from RON or GBP
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        checkButton = findViewById(R.id.checkButton);
+        amountToConvert = findViewById(R.id.amount_to_convert);
         textView = findViewById(R.id.text);
 
-        checkButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                checkForFile();
-            }
-        });
-    }
-
-    private void checkForFile() {
-
         file = getBaseContext().getFileStreamPath(EXCHANGE_RATES_XML);
-
         if (!file.exists()) {
             Toast.makeText(getApplicationContext(), "Start download!!", Toast.LENGTH_SHORT).show();
             new DownloadExchangeRatesFromECB().execute();
         } else {
             Toast.makeText(getApplicationContext(), "File allready exist!", Toast.LENGTH_SHORT).show();
-            parseXML();
+            ecbCurrencyList = parseXML();
         }
+
+        amountToConvert.setOnKeyListener(new View.OnKeyListener() {
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                if ((event.getAction() == KeyEvent.ACTION_DOWN) && (keyCode == KeyEvent.KEYCODE_ENTER)) {
+                    if (amountToConvert.getText().toString().matches("")) {
+                        Toast.makeText(getApplicationContext(), "Please enter a value!", Toast.LENGTH_SHORT).show();
+                    } else {
+                        int inputValue = Integer.valueOf(amountToConvert.getText().toString());
+
+                        printExchangeRates(ecbCurrencyList, inputValue);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
     }
 
-    private void parseXML() {
+    private List<EcbCurrency> parseXML() {
 
         //https://stackoverflow.com/questions/50316974/how-to-read-an-online-xml-file-for-currency-rates-in-java
-        List<EcbCurrency> ecbCurrencyList = new ArrayList<>();
+        List<EcbCurrency> ecbCurrencies = new ArrayList<>();
         DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = null;
 
@@ -111,7 +125,7 @@ public class MainActivity extends AppCompatActivity {
                         String currencyTxt = currencyAttribute.getNodeValue();
                         String rateTxt = nodeAttributes.getNamedItem(RATE).getNodeValue();
                         double rateValue = Double.parseDouble(rateTxt);
-                        ecbCurrencyList.add(new EcbCurrency(currencyTxt, rateValue));
+                        ecbCurrencies.add(new EcbCurrency(currencyTxt, rateValue));
                     }
                 }
             }
@@ -119,15 +133,27 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        printExchangeRates(ecbCurrencyList);
+        return ecbCurrencies;
         }
 
-    private void printExchangeRates(List<EcbCurrency> currencies) {
+    private void printExchangeRates(List<EcbCurrency> currencies, int inputValue) {
         StringBuilder builder = new StringBuilder();
+        String currencyName = "";
 
         for (EcbCurrency ecbCurrency : currencies) {
-            builder.append(ecbCurrency.name).append("\n").
-                    append(ecbCurrency.value).append("\n");
+            //will use the integer values of exchange rates conversions for simplicity
+            int convertedValue = (int) (ecbCurrency.value * inputValue);
+
+            //Gets the name that is suitable for displaying this currency from the currency code
+            Currency currency = Currency.getInstance(ecbCurrency.name);
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+                currencyName = currency.getDisplayName();
+            }
+
+            builder.append(" = ").append(convertedValue).append("  ").
+                    append(ecbCurrency.name).append(" - ").
+                    append(currencyName).
+                    append("\n");
         }
 
         textView.setText(builder.toString());
