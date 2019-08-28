@@ -3,7 +3,6 @@ package com.example.android.currencyconverter;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -11,19 +10,39 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.android.currencyconverter.Model.EcbCurrency;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
+
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final String CURRENCY = "currency";
+    private static final String CUBE_NODE = "//Cube/Cube/Cube";
+    private static final String RATE = "rate";
 
     private static final String EXCHANGE_RATES_XML = "exchange_rates.xml";
 
@@ -57,39 +76,61 @@ public class MainActivity extends AppCompatActivity {
             new DownloadExchangeRatesFromECB().execute();
         } else {
             Toast.makeText(getApplicationContext(), "File allready exist!", Toast.LENGTH_SHORT).show();
-            String xml = readFromFile(getApplicationContext());
-            textView.setText(xml);
+            parseXML();
         }
     }
 
-    private String readFromFile(Context context) {
+    private void parseXML() {
 
-        String ret = "";
+        //https://stackoverflow.com/questions/50316974/how-to-read-an-online-xml-file-for-currency-rates-in-java
+        List<EcbCurrency> ecbCurrencyList = new ArrayList<>();
+        DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = null;
 
         try {
-            InputStream inputStream = context.openFileInput(EXCHANGE_RATES_XML);
+            builder = builderFactory.newDocumentBuilder();
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        }
+        Document document;
 
-            if ( inputStream != null ) {
-                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-                String receiveString = "";
-                StringBuilder stringBuilder = new StringBuilder();
+        try {
+            InputStream inputStream = getApplicationContext().openFileInput(EXCHANGE_RATES_XML);
+            document = builder.parse(inputStream);
 
-                while ( (receiveString = bufferedReader.readLine()) != null ) {
-                    stringBuilder.append(receiveString);
+            XPathFactory xPathfactory = XPathFactory.newInstance();
+            XPath xpath = xPathfactory.newXPath();
+            XPathExpression expr = xpath.compile(CUBE_NODE);
+            NodeList nl = (NodeList) expr.evaluate(document, XPathConstants.NODESET);
+            for (int i = 0; i < nl.getLength(); i++) {
+                Node node = nl.item(i);
+                NamedNodeMap nodeAttributes = node.getAttributes();
+                if (nodeAttributes.getLength() > 0) {
+                    Node currencyAttribute = nodeAttributes.getNamedItem(CURRENCY);
+                    if (currencyAttribute != null) {
+                        String currencyTxt = currencyAttribute.getNodeValue();
+                        String rateTxt = nodeAttributes.getNamedItem(RATE).getNodeValue();
+                        double rateValue = Double.parseDouble(rateTxt);
+                        ecbCurrencyList.add(new EcbCurrency(currencyTxt, rateValue));
+                    }
                 }
-
-                inputStream.close();
-                ret = stringBuilder.toString();
             }
-        }
-        catch (FileNotFoundException e) {
-            Log.e("login activity", "File not found: " + e.toString());
-        } catch (IOException e) {
-            Log.e("login activity", "Can not read file: " + e.toString());
+        } catch (SAXException | IOException | XPathExpressionException e) {
+            e.printStackTrace();
         }
 
-        return ret;
+        printExchangeRates(ecbCurrencyList);
+        }
+
+    private void printExchangeRates(List<EcbCurrency> currencies) {
+        StringBuilder builder = new StringBuilder();
+
+        for (EcbCurrency ecbCurrency : currencies) {
+            builder.append(ecbCurrency.name).append("\n").
+                    append(ecbCurrency.value).append("\n");
+        }
+
+        textView.setText(builder.toString());
     }
 
     class DownloadExchangeRatesFromECB extends AsyncTask<String, String, String> {
