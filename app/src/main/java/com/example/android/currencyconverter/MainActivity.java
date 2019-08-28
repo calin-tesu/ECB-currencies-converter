@@ -104,8 +104,7 @@ public class MainActivity extends AppCompatActivity {
                 connection.connect();
 
                 // download the file
-                InputStream input = new BufferedInputStream(url.openStream(),
-                        8192);
+                InputStream input = new BufferedInputStream(url.openStream(), 8192);
 
                 // Output stream
                 FileOutputStream output = openFileOutput(EXCHANGE_RATES_XML, Context.MODE_PRIVATE);
