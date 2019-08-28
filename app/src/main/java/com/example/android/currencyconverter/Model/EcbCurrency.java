@@ -3,14 +3,17 @@ package com.example.android.currencyconverter.Model;
 /**
  * Created by Calin Tesu on 8/28/2019.
  */
-public class Currency {
+public class EcbCurrency {
 
-    private String name;
-    private double value;
+    public String name;
+    public double value;
 
-    public Currency(String name, double value) {
+    public EcbCurrency(String name, double value) {
         this.name = name;
         this.value = value;
+    }
+
+    public EcbCurrency() {
     }
 
     public String getName() {
