@@ -110,18 +110,9 @@ public class MainActivity extends AppCompatActivity {
                 // Output stream
                 FileOutputStream output = openFileOutput(EXCHANGE_RATES_XML, Context.MODE_PRIVATE);
 
-                //OutputStream output = new FileOutputStream(EXCHANGE_RATES_XML);
-
                 byte[] data = new byte[1024];
 
-                //long total = 0;
-
                 while ((count = input.read(data)) != -1) {
-                    //total += count;
-                    // publishing the progress....
-                    // After this onProgressUpdate will be called
-                    //publishProgress("" + (int) ((total * 100) / lenghtOfFile));
-
                     // writing data to file
                     output.write(data, 0, count);
                 }
