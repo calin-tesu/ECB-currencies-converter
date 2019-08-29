@@ -22,8 +22,6 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Currency;
 import java.util.Date;
 import java.util.List;
@@ -32,17 +30,13 @@ import static com.example.android.currencyconverter.Constants.EXCHANGE_RATES_XML
 
 public class MainActivity extends AppCompatActivity {
 
+    Date currenciesDate = null;
+    File file;
     private TextView timeOfExchangeRates;
     private EditText amountToConvert;
     private TextView convertedValuesTxt;
-
     private List<EcbCurrency> ecbCurrencyList;
-
     private ParseXML parseXML;
-
-    Date currenciesDate = null;
-
-    File file;
 
     //TODO add a recyclerView to display the converted values
 
@@ -58,32 +52,34 @@ public class MainActivity extends AppCompatActivity {
         amountToConvert = findViewById(R.id.amount_to_convert);
         convertedValuesTxt = findViewById(R.id.text);
 
+        file = getBaseContext().getFileStreamPath(EXCHANGE_RATES_XML);
+        //Download XML from API
+        //TODO fix logical statement to only download if current time if
+        if (!file.exists()) {
+            Toast.makeText(getApplicationContext(), "Start download!!", Toast.LENGTH_SHORT).show();
+            new DownloadExchangeRatesFromECB().execute();
+        } else {
+            Toast.makeText(getApplicationContext(), "File allready exist!", Toast.LENGTH_SHORT).show();
+            calculateExchangeRates();
+        }
+    }
+
+    private void calculateExchangeRates() {
         parseXML = new ParseXML(getApplicationContext());
         String timeRates = parseXML.getCurrenciesTime();
 
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy/MM/dd");
+       /* SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
         currenciesDate = new Date();
 
         try {
             currenciesDate = simpleDateFormat.parse(timeRates);
         } catch (ParseException e) {
             e.printStackTrace();
-        }
-
-        file = getBaseContext().getFileStreamPath(EXCHANGE_RATES_XML);
-        //Download XML from API
-        //TODO fix logical statement to download only if the the difference in time between
-        //the date of current XML file and current date is greater then 24h
-        if (!file.exists() || new Date().after(currenciesDate)) {
-            Toast.makeText(getApplicationContext(), "Start download!!", Toast.LENGTH_SHORT).show();
-            new DownloadExchangeRatesFromECB().execute();
-        } else {
-            Toast.makeText(getApplicationContext(), "File allready exist!", Toast.LENGTH_SHORT).show();
-            //parseXML = new ParseXML(getApplicationContext());
-            ecbCurrencyList = parseXML.getCurrenciesValues();
-        }
+        }*/
 
         timeOfExchangeRates.setText(timeRates);
+
+        ecbCurrencyList = parseXML.getCurrenciesValues();
 
         amountToConvert.setOnKeyListener(new View.OnKeyListener() {
             public boolean onKey(View v, int keyCode, KeyEvent event) {
@@ -167,7 +163,8 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(String s) {
-            Toast.makeText(getApplicationContext(),"Download successful!!!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), "Download successful!!!", Toast.LENGTH_SHORT).show();
+            calculateExchangeRates();
         }
     }
 }
