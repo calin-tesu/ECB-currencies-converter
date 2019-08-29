@@ -1,6 +1,8 @@
 package com.example.android.currencyconverter;
 
 import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.KeyEvent;
@@ -53,10 +55,14 @@ public class MainActivity extends AppCompatActivity {
         convertedValuesTxt = findViewById(R.id.text);
 
         file = getBaseContext().getFileStreamPath(EXCHANGE_RATES_XML);
+
         //Download XML from API
         //TODO fix logical statement to only download if current time if
-        if (!file.exists()) {
-            Toast.makeText(getApplicationContext(), "Start download!!", Toast.LENGTH_SHORT).show();
+        if (!file.exists() && !isNetworkAvailable()) {
+            convertedValuesTxt.setText("Internet connectivity needed to download initial foreign" +
+                    " currencies exchange values from European Central Bank.");
+        } else if (!file.exists()) {
+            Toast.makeText(getApplicationContext(), "Downloading initial data", Toast.LENGTH_SHORT).show();
             new DownloadExchangeRatesFromECB().execute();
         } else {
             Toast.makeText(getApplicationContext(), "File allready exist!", Toast.LENGTH_SHORT).show();
@@ -166,5 +172,11 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(getApplicationContext(), "Download successful!!!", Toast.LENGTH_SHORT).show();
             calculateExchangeRates();
         }
+    }
+
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
 }
