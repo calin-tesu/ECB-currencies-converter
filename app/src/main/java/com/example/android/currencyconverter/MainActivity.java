@@ -29,10 +29,13 @@ import static com.example.android.currencyconverter.Constants.EXCHANGE_RATES_XML
 
 public class MainActivity extends AppCompatActivity {
 
+    private TextView timeOfExchangeRates;
     private EditText amountToConvert;
-    private TextView textView;
+    private TextView convertedValuesTxt;
 
     private List<EcbCurrency> ecbCurrencyList;
+
+    private ParseXML parseXML;
 
     File file;
 
@@ -46,8 +49,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        timeOfExchangeRates = findViewById(R.id.time_of_rates);
         amountToConvert = findViewById(R.id.amount_to_convert);
-        textView = findViewById(R.id.text);
+        convertedValuesTxt = findViewById(R.id.text);
+
+        parseXML = new ParseXML(getApplicationContext());
 
         file = getBaseContext().getFileStreamPath(EXCHANGE_RATES_XML);
         if (!file.exists()) {
@@ -55,9 +61,11 @@ public class MainActivity extends AppCompatActivity {
             new DownloadExchangeRatesFromECB().execute();
         } else {
             Toast.makeText(getApplicationContext(), "File allready exist!", Toast.LENGTH_SHORT).show();
-            ParseXML parseXML = new ParseXML(getApplicationContext());
+            //parseXML = new ParseXML(getApplicationContext());
             ecbCurrencyList = parseXML.getCurrenciesValues();
         }
+
+        timeOfExchangeRates.setText(parseXML.getCurrenciesTime());
 
         amountToConvert.setOnKeyListener(new View.OnKeyListener() {
             public boolean onKey(View v, int keyCode, KeyEvent event) {
@@ -96,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
                     append("\n");
         }
 
-        textView.setText(builder.toString());
+        convertedValuesTxt.setText(builder.toString());
     }
 
     class DownloadExchangeRatesFromECB extends AsyncTask<String, String, String> {

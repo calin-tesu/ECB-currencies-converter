@@ -79,7 +79,7 @@ public class ParseXML {
             Node node = nl.item(0);
             NamedNodeMap nodeAttributes = node.getAttributes();
             if (nodeAttributes.getLength() > 0) {
-                Node timeAttribute = nodeAttributes.getNamedItem(Constants.CURRENCY);
+                Node timeAttribute = nodeAttributes.getNamedItem(Constants.TIME);
                 if (timeAttribute != null) {
                     timeTxt = timeAttribute.getNodeValue();
                 }

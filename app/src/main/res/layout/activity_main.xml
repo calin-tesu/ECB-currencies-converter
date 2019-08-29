@@ -6,7 +6,18 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:layout_margin="8dp"
     tools:context=".MainActivity">
+
+    <TextView
+        android:id="@+id/time_of_rates"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textStyle="bold"
+        android:background="@android:color/holo_green_light"
+        android:textAppearance="@style/TextAppearance.AppCompat.Headline"
+        tools:text="2019-08-28"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -28,7 +39,7 @@
             android:layout_weight="1"
             android:gravity="center"
             android:textAppearance="@style/TextAppearance.AppCompat.Headline"
-            android:textStyle="bold"
+            android:textStyle="italic"
             android:text="EUR"/>
 
     </LinearLayout>
