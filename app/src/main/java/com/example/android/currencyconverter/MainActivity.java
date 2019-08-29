@@ -24,6 +24,9 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Currency;
 import java.util.Date;
 import java.util.List;
@@ -54,34 +57,29 @@ public class MainActivity extends AppCompatActivity {
         amountToConvert = findViewById(R.id.amount_to_convert);
         convertedValuesTxt = findViewById(R.id.text);
 
+        parseXML = new ParseXML(getApplicationContext());
+
         file = getBaseContext().getFileStreamPath(EXCHANGE_RATES_XML);
 
         //Download XML from API
-        //TODO fix logical statement to only download if current time if
+        //The downloaded XML file will also solve the problem of local data persistence
         if (!file.exists() && !isNetworkAvailable()) {
             convertedValuesTxt.setText("Internet connectivity needed to download initial foreign" +
                     " currencies exchange values from European Central Bank.");
         } else if (!file.exists()) {
             Toast.makeText(getApplicationContext(), "Downloading initial data", Toast.LENGTH_SHORT).show();
             new DownloadExchangeRatesFromECB().execute();
+        } else if (isNewRatesAvailable() && isNetworkAvailable()) {
+            Toast.makeText(getApplicationContext(), "Downloading NEW DATA", Toast.LENGTH_SHORT).show();
+            new DownloadExchangeRatesFromECB().execute();
         } else {
-            Toast.makeText(getApplicationContext(), "File allready exist!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), "File already exist!", Toast.LENGTH_SHORT).show();
             calculateExchangeRates();
         }
     }
 
     private void calculateExchangeRates() {
-        parseXML = new ParseXML(getApplicationContext());
         String timeRates = parseXML.getCurrenciesTime();
-
-       /* SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        currenciesDate = new Date();
-
-        try {
-            currenciesDate = simpleDateFormat.parse(timeRates);
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }*/
 
         timeOfExchangeRates.setText(timeRates);
 
@@ -178,5 +176,26 @@ public class MainActivity extends AppCompatActivity {
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
         return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+    }
+
+    private boolean isNewRatesAvailable() {
+        String timeRates = parseXML.getCurrenciesTime();
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        //currenciesDate = new Date();
+        Calendar calendar = Calendar.getInstance();
+
+        try {
+            currenciesDate = simpleDateFormat.parse(timeRates);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
+        /*
+        Rates are published by European Central Bank every working day around 16:00 CET but for
+        simplicity i have decided to just add 2 days to the date of the last downloaded XML
+        */
+        //TODO fix this
+        calendar.add(Calendar.DATE, 2);
+        return calendar.after(new Date());
     }
 }
