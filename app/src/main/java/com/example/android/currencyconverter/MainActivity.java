@@ -5,6 +5,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.EditText;
@@ -28,15 +29,14 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Currency;
-import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 
 import static com.example.android.currencyconverter.Constants.EXCHANGE_RATES_XML;
 
 public class MainActivity extends AppCompatActivity {
 
-    Date currenciesDate = null;
-    File file;
+    private File file;
     private TextView timeOfExchangeRates;
     private EditText amountToConvert;
     private TextView convertedValuesTxt;
@@ -176,24 +176,42 @@ public class MainActivity extends AppCompatActivity {
         return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
 
+    /*
+    This method checks if there is new exchange rates published by ECB.
+    Rates are published by European Central Bank every working day around 16:00 CET
+    */
+    //TODO find a solution to download the XML only in the working days of ECB
+    /*Ex: On Saturday and Sunday the app will download the same XML downloaded on Friday
+    * (which is valid until Monday at 16:00*/
     private boolean isNewRatesAvailable() {
+        //Get the time of currencies rates specified in the downloaded XML
         String timeRates = parseXML.getCurrenciesTime();
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        //currenciesDate = new Date();
-        Calendar calendar = Calendar.getInstance();
+        Calendar timeOfDownloadedXML = Calendar.getInstance();
 
+        /*
+        Set time of timeOfDownloadedXML to be the date of the last downloaded XML at time 00:00
+        */
         try {
-            currenciesDate = simpleDateFormat.parse(timeRates);
+            timeOfDownloadedXML.setTime(simpleDateFormat.parse(timeRates));
         } catch (ParseException e) {
             e.printStackTrace();
         }
 
+        Log.i("Date of downloaded XML", String.valueOf(timeOfDownloadedXML));
+
         /*
-        Rates are published by European Central Bank every working day around 16:00 CET but for
-        simplicity i have decided to just add 2 days to the date of the last downloaded XML
+        Find the date and time until the current downloaded XML with the exchange rates are valid.
+        For this we will add 40 hours to variable timeOfDownloadedXML (the date specified in the current downloaded XML at hour 00:00)
+        to reach the next day at 16:00 (24h + 16h = 40h).
         */
-        //TODO fix this
-        calendar.add(Calendar.DATE, 2);
-        return calendar.after(new Date());
+        timeOfDownloadedXML.add(Calendar.HOUR, 40);
+        Log.i("Date for new download", String.valueOf(timeOfDownloadedXML));
+
+        /*
+        If current date and time in Central Europe TimeZone is after timeOfDownloadedXML then
+        there is a new XML to download
+        */
+        return Calendar.getInstance(TimeZone.getTimeZone("CET")).after(timeOfDownloadedXML);
     }
 }
