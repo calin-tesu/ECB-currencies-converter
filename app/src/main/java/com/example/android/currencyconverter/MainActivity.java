@@ -91,24 +91,22 @@ public class MainActivity extends AppCompatActivity {
                     if (amountToConvert.getText().toString().matches("")) {
                         Toast.makeText(getApplicationContext(), "Please enter a value!", Toast.LENGTH_SHORT).show();
                     } else {
-                        int inputValue = Integer.valueOf(amountToConvert.getText().toString());
+                        double inputValue = Double.valueOf(amountToConvert.getText().toString());
 
                         printExchangeRates(ecbCurrencyList, inputValue);
                     }
-                    return true;
                 }
                 return false;
             }
         });
     }
 
-    private void printExchangeRates(List<EcbCurrency> currencies, int inputValue) {
+    private void printExchangeRates(List<EcbCurrency> currencies, double inputValue) {
         StringBuilder builder = new StringBuilder();
         String currencyName = "";
 
         for (EcbCurrency ecbCurrency : currencies) {
-            //will use the integer values of exchange rates conversions for simplicity
-            int convertedValue = (int) (ecbCurrency.value * inputValue);
+            double convertedValue = (ecbCurrency.value * inputValue);
 
             //Gets the name that is suitable for displaying this currency from the currency code
             Currency currency = Currency.getInstance(ecbCurrency.name);
