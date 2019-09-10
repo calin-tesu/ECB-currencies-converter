@@ -39,14 +39,14 @@
             android:maxLength="6"
             android:imeOptions="actionGo"/>
 
-        <TextView
+        <Spinner
+            android:id="@+id/spinner"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center"
             android:textAppearance="@style/TextAppearance.AppCompat.Headline"
-            android:textStyle="italic"
-            android:text="EUR"/>
+            android:textStyle="italic" />
 
     </LinearLayout>
 
@@ -57,7 +57,7 @@
         <TextView
             android:id="@+id/text"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:textAppearance="@style/TextAppearance.AppCompat.Large"
             android:gravity="end" />
 

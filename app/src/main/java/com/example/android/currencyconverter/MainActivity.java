@@ -8,7 +8,10 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -27,6 +30,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Currency;
 import java.util.List;
@@ -34,19 +38,18 @@ import java.util.TimeZone;
 
 import static com.example.android.currencyconverter.Constants.EXCHANGE_RATES_XML;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
 
     private File file;
     private TextView timeOfExchangeRates;
     private EditText amountToConvert;
     private TextView convertedValuesTxt;
+    private Spinner spinner;
+
     private List<EcbCurrency> ecbCurrencyList;
     private ParseXML parseXML;
 
     //TODO add a recyclerView to display the converted values
-
-    //TODO add a Spinner and the logic to switch between currencies to convert (convert from USD
-    //or from RON or GBP
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,7 +58,9 @@ public class MainActivity extends AppCompatActivity {
 
         timeOfExchangeRates = findViewById(R.id.time_of_rates);
         amountToConvert = findViewById(R.id.amount_to_convert);
+        amountToConvert.setText("1");
         convertedValuesTxt = findViewById(R.id.text);
+        spinner = findViewById(R.id.spinner);
 
         parseXML = new ParseXML(getApplicationContext());
 
@@ -74,31 +79,46 @@ public class MainActivity extends AppCompatActivity {
             new DownloadExchangeRatesFromECB().execute();
         } else {
             Toast.makeText(getApplicationContext(), "File already exist!", Toast.LENGTH_SHORT).show();
-            calculateExchangeRates();
+            ecbCurrencyList = parseXML.getCurrenciesValues();
+            setupSpinner();
+            spinner.setOnItemSelectedListener(this);
+            calculateExchangeRates(ecbCurrencyList);
         }
     }
 
-    private void calculateExchangeRates() {
+    private void setupSpinner() {
+        List<String> currenciesNames = new ArrayList<>();
+
+        for (int i = 0; i <= ecbCurrencyList.size(); i++) {
+            if (i == 0) {
+                currenciesNames.add("EUR");
+            } else {
+                currenciesNames.add(ecbCurrencyList.get(i - 1).getName());
+            }
+        }
+
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, currenciesNames);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(spinnerAdapter);
+    }
+
+    private void calculateExchangeRates(final List<EcbCurrency> currencies) {
         String timeRates = parseXML.getCurrenciesTime();
 
         timeOfExchangeRates.setText(timeRates);
-
-        ecbCurrencyList = parseXML.getCurrenciesValues();
 
         amountToConvert.setOnKeyListener(new View.OnKeyListener() {
             public boolean onKey(View v, int keyCode, KeyEvent event) {
                 if ((event.getAction() == KeyEvent.ACTION_DOWN) && (keyCode == KeyEvent.KEYCODE_ENTER)) {
                     if (amountToConvert.getText().toString().matches("")) {
                         Toast.makeText(getApplicationContext(), "Please enter a value!", Toast.LENGTH_SHORT).show();
-                    } else {
-                        double inputValue = Double.valueOf(amountToConvert.getText().toString());
-
-                        printExchangeRates(ecbCurrencyList, inputValue);
                     }
                 }
                 return false;
             }
         });
+
+        printExchangeRates(currencies, Double.valueOf(amountToConvert.getText().toString()));
     }
 
     private void printExchangeRates(List<EcbCurrency> currencies, double inputValue) {
@@ -121,6 +141,46 @@ public class MainActivity extends AppCompatActivity {
         }
 
         convertedValuesTxt.setText(builder.toString());
+    }
+
+    @Override
+    public void onItemSelected(AdapterView<?> adapterView, View view, int position, long id) {
+        List<EcbCurrency> currencyList = new ArrayList<>();
+        EcbCurrency switchCurrency = new EcbCurrency();
+        ecbCurrencyList = parseXML.getCurrenciesValues();
+        double euroToNewCurrencyExchangeRate = 0;
+
+        String referenceCurrency = adapterView.getItemAtPosition(position).toString();
+
+        if (!referenceCurrency.equals("EUR")) {
+
+            for (int i = 0; i < ecbCurrencyList.size(); i++) {
+                if (ecbCurrencyList.get(i).getName().equals(referenceCurrency)) {
+                    euroToNewCurrencyExchangeRate = 1 / ecbCurrencyList.get(i).getValue();
+                }
+            }
+
+            for (int i = 0; i < ecbCurrencyList.size(); i++) {
+                if (ecbCurrencyList.get(i).name.equals(referenceCurrency)) {
+                    switchCurrency.name = "EUR";
+                    switchCurrency.value = euroToNewCurrencyExchangeRate;
+                    currencyList.add(new EcbCurrency(switchCurrency.name, switchCurrency.value));
+                } else {
+                    switchCurrency.name = ecbCurrencyList.get(i).getName();
+                    switchCurrency.value = ecbCurrencyList.get(i).getValue() * euroToNewCurrencyExchangeRate;
+                    currencyList.add(new EcbCurrency(switchCurrency.name, switchCurrency.value));
+                }
+            }
+
+            calculateExchangeRates(currencyList);
+        } else {
+            calculateExchangeRates(parseXML.getCurrenciesValues());
+        }
+    }
+
+    @Override
+    public void onNothingSelected(AdapterView<?> adapterView) {
+
     }
 
     class DownloadExchangeRatesFromECB extends AsyncTask<String, String, String> {
@@ -166,7 +226,9 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(String s) {
             Toast.makeText(getApplicationContext(), "Download successful!!!", Toast.LENGTH_SHORT).show();
-            calculateExchangeRates();
+            ecbCurrencyList = parseXML.getCurrenciesValues();
+            spinner.setOnItemSelectedListener((AdapterView.OnItemSelectedListener) getApplicationContext());
+            calculateExchangeRates(ecbCurrencyList);
         }
     }
 
