@@ -112,6 +112,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 if ((event.getAction() == KeyEvent.ACTION_DOWN) && (keyCode == KeyEvent.KEYCODE_ENTER)) {
                     if (amountToConvert.getText().toString().matches("")) {
                         Toast.makeText(getApplicationContext(), "Please enter a value!", Toast.LENGTH_SHORT).show();
+                    } else {
+                        printExchangeRates(currencies, Double.valueOf(amountToConvert.getText().toString()));
                     }
                 }
                 return false;
@@ -134,7 +136,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 currencyName = currency.getDisplayName();
             }
 
-            builder.append(" = ").append(convertedValue).append("  ").
+            //Format value to 2 decimal places for readability
+            builder.append(" = ").append(String.format("%.2f", convertedValue)).append("  ").
                     append(ecbCurrency.name).append(" - ").
                     append(currencyName).
                     append("\n");
@@ -172,15 +175,70 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 }
             }
 
-            calculateExchangeRates(currencyList);
+            if (amountToConvert.getText().toString().matches("")) {
+                Toast.makeText(getApplicationContext(), "Please enter a value!", Toast.LENGTH_SHORT).show();
+            } else {
+                printExchangeRates(currencyList, Double.valueOf(amountToConvert.getText().toString()));
+            }
+
         } else {
-            calculateExchangeRates(parseXML.getCurrenciesValues());
+            if (amountToConvert.getText().toString().matches("")) {
+                Toast.makeText(getApplicationContext(), "Please enter a value!", Toast.LENGTH_SHORT).show();
+            } else {
+                printExchangeRates(currencyList, Double.valueOf(amountToConvert.getText().toString()));
+            }
+
         }
     }
 
     @Override
     public void onNothingSelected(AdapterView<?> adapterView) {
 
+    }
+
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
+    }
+
+    /*
+    This method checks if there is new exchange rates published by ECB.
+    Rates are published by European Central Bank every working day around 16:00 CET
+    */
+    //TODO find a solution to download the XML only in the working days of ECB
+    /*Ex: On Saturday and Sunday the app will download the same XML downloaded on Friday
+     * (which is valid until Monday at 16:00*/
+    private boolean isNewRatesAvailable() {
+        //Get the time of currencies rates specified in the downloaded XML
+        String timeRates = parseXML.getCurrenciesTime();
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        Calendar timeOfDownloadedXML = Calendar.getInstance();
+
+        /*
+        Set time of timeOfDownloadedXML to be the date of the last downloaded XML at time 00:00
+        */
+        try {
+            timeOfDownloadedXML.setTime(simpleDateFormat.parse(timeRates));
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
+        Log.i("Date of downloaded XML", String.valueOf(timeOfDownloadedXML));
+
+        /*
+        Find the date and time until the current downloaded XML with the exchange rates are valid.
+        For this we will add 40 hours to variable timeOfDownloadedXML (the date specified in the current downloaded XML at hour 00:00)
+        to reach the next day at 16:00 (24h + 16h = 40h).
+        */
+        timeOfDownloadedXML.add(Calendar.HOUR, 40);
+        Log.i("Date for new download", String.valueOf(timeOfDownloadedXML));
+
+        /*
+        If current date and time in Central Europe TimeZone is after timeOfDownloadedXML then
+        there is a new XML to download
+        */
+        return Calendar.getInstance(TimeZone.getTimeZone("CET")).after(timeOfDownloadedXML);
     }
 
     class DownloadExchangeRatesFromECB extends AsyncTask<String, String, String> {
@@ -230,50 +288,5 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             spinner.setOnItemSelectedListener((AdapterView.OnItemSelectedListener) getApplicationContext());
             calculateExchangeRates(ecbCurrencyList);
         }
-    }
-
-    private boolean isNetworkAvailable() {
-        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
-    }
-
-    /*
-    This method checks if there is new exchange rates published by ECB.
-    Rates are published by European Central Bank every working day around 16:00 CET
-    */
-    //TODO find a solution to download the XML only in the working days of ECB
-    /*Ex: On Saturday and Sunday the app will download the same XML downloaded on Friday
-    * (which is valid until Monday at 16:00*/
-    private boolean isNewRatesAvailable() {
-        //Get the time of currencies rates specified in the downloaded XML
-        String timeRates = parseXML.getCurrenciesTime();
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        Calendar timeOfDownloadedXML = Calendar.getInstance();
-
-        /*
-        Set time of timeOfDownloadedXML to be the date of the last downloaded XML at time 00:00
-        */
-        try {
-            timeOfDownloadedXML.setTime(simpleDateFormat.parse(timeRates));
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-
-        Log.i("Date of downloaded XML", String.valueOf(timeOfDownloadedXML));
-
-        /*
-        Find the date and time until the current downloaded XML with the exchange rates are valid.
-        For this we will add 40 hours to variable timeOfDownloadedXML (the date specified in the current downloaded XML at hour 00:00)
-        to reach the next day at 16:00 (24h + 16h = 40h).
-        */
-        timeOfDownloadedXML.add(Calendar.HOUR, 40);
-        Log.i("Date for new download", String.valueOf(timeOfDownloadedXML));
-
-        /*
-        If current date and time in Central Europe TimeZone is after timeOfDownloadedXML then
-        there is a new XML to download
-        */
-        return Calendar.getInstance(TimeZone.getTimeZone("CET")).after(timeOfDownloadedXML);
     }
 }
