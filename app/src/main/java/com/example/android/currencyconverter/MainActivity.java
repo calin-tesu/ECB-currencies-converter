@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
@@ -38,7 +39,7 @@ import java.util.TimeZone;
 
 import static com.example.android.currencyconverter.Constants.EXCHANGE_RATES_XML;
 
-public class MainActivity extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
+public class MainActivity extends AppCompatActivity implements OnItemSelectedListener {
 
     private File file;
     private TextView timeOfExchangeRates;
@@ -241,7 +242,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         return Calendar.getInstance(TimeZone.getTimeZone("CET")).after(timeOfDownloadedXML);
     }
 
-    class DownloadExchangeRatesFromECB extends AsyncTask<String, String, String> {
+    class DownloadExchangeRatesFromECB extends AsyncTask<String, String, String> implements OnItemSelectedListener {
 
         @Override
         protected String doInBackground(String... urls) {
@@ -285,8 +286,60 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         protected void onPostExecute(String s) {
             Toast.makeText(getApplicationContext(), "Download successful!!!", Toast.LENGTH_SHORT).show();
             ecbCurrencyList = parseXML.getCurrenciesValues();
-            spinner.setOnItemSelectedListener((AdapterView.OnItemSelectedListener) getApplicationContext());
+            setupSpinner();
+            spinner.setOnItemSelectedListener(this);
             calculateExchangeRates(ecbCurrencyList);
+        }
+
+        @Override
+        public void onItemSelected(AdapterView<?> adapterView, View view, int position, long id) {
+            //TODO extract this logic from here and line 152 to another method
+            List<EcbCurrency> currencyList = new ArrayList<>();
+            EcbCurrency switchCurrency = new EcbCurrency();
+            ecbCurrencyList = parseXML.getCurrenciesValues();
+            double euroToNewCurrencyExchangeRate = 0;
+
+            String referenceCurrency = adapterView.getItemAtPosition(position).toString();
+
+            if (!referenceCurrency.equals("EUR")) {
+
+                for (int i = 0; i < ecbCurrencyList.size(); i++) {
+                    if (ecbCurrencyList.get(i).getName().equals(referenceCurrency)) {
+                        euroToNewCurrencyExchangeRate = 1 / ecbCurrencyList.get(i).getValue();
+                    }
+                }
+
+                for (int i = 0; i < ecbCurrencyList.size(); i++) {
+                    if (ecbCurrencyList.get(i).name.equals(referenceCurrency)) {
+                        switchCurrency.name = "EUR";
+                        switchCurrency.value = euroToNewCurrencyExchangeRate;
+                        currencyList.add(new EcbCurrency(switchCurrency.name, switchCurrency.value));
+                    } else {
+                        switchCurrency.name = ecbCurrencyList.get(i).getName();
+                        switchCurrency.value = ecbCurrencyList.get(i).getValue() * euroToNewCurrencyExchangeRate;
+                        currencyList.add(new EcbCurrency(switchCurrency.name, switchCurrency.value));
+                    }
+                }
+
+                if (amountToConvert.getText().toString().matches("")) {
+                    Toast.makeText(getApplicationContext(), "Please enter a value!", Toast.LENGTH_SHORT).show();
+                } else {
+                    printExchangeRates(currencyList, Double.valueOf(amountToConvert.getText().toString()));
+                }
+
+            } else {
+                if (amountToConvert.getText().toString().matches("")) {
+                    Toast.makeText(getApplicationContext(), "Please enter a value!", Toast.LENGTH_SHORT).show();
+                } else {
+                    printExchangeRates(currencyList, Double.valueOf(amountToConvert.getText().toString()));
+                }
+
+            }
+        }
+
+        @Override
+        public void onNothingSelected(AdapterView<?> adapterView) {
+
         }
     }
 }
